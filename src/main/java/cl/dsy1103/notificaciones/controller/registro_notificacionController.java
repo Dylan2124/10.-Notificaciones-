@@ -21,7 +21,11 @@ public class registro_notificacionController {
 
     // ── GET  ────────────────────────────────────
     @GetMapping
-    public ResponseEntity<List<registro_notificacionResponseDTO>> obtenerTodas() {
+    public ResponseEntity<?> obtenerTodas() {
+        List<registro_notificacionResponseDTO> lista = service.obtenerTodas();
+        if (lista.isEmpty()){
+            return ResponseEntity.ok("No se encontraron notificaciones");
+        }
         return ResponseEntity.ok(service.obtenerTodas());
     }
 
@@ -67,4 +71,5 @@ public class registro_notificacionController {
         service.eliminar(id);
         return ResponseEntity.noContent().build();
     }
+
 }
