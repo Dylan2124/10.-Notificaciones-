@@ -33,4 +33,5 @@ public class registro_notificacion {
 
     @Column(name = "fecha_envio")
     private LocalDateTime fechaEnvio;
+
 }
