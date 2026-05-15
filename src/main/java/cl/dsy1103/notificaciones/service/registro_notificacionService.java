@@ -54,18 +54,15 @@ public class registro_notificacionService {
                 dto.getMensaje(),
                 LocalDateTime.now()
         );
-
         return mapToDTO(repository.save(nuevaNotificacion));
     }
 
-    // ── ACTUALIZAR ───────────────────────────────────
+    // ── ACTUALIZAR ──────────────────────────────────────
     public Optional<registro_notificacionResponseDTO> actualizar(Long id, registro_notificacionRequestDTO dto) {
         return repository.findById(id).map(existente -> {
-            existente.setIdUsuario(dto.getIdUsuario());
-            existente.setIdPedido(dto.getIdPedido());
-            existente.setTipo(dto.getTipo());
-            existente.setMensaje(dto.getMensaje());
             return mapToDTO(repository.save(existente));
+            }).or(() -> {
+            throw new RuntimeException("Notificación NO encontrada con id: " + id);
         });
     }
 
