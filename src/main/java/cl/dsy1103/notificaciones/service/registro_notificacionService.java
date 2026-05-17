@@ -44,6 +44,14 @@ public class registro_notificacionService {
         return repository.findById(id).map(this::mapToDTO);
     }
 
+    // ── OBTENER POR USUARIO ───────────────────────────────
+    public List<registro_notificacionResponseDTO> obtenerPorUsuario(Long idUsuario) {
+        return repository.findByIdUsuario(idUsuario)
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
     // ── GUARDAR ──────────────────────────────────────
     public registro_notificacionResponseDTO guardar(registro_notificacionRequestDTO dto) {
         registro_notificacion nuevaNotificacion = new registro_notificacion(
@@ -57,12 +65,16 @@ public class registro_notificacionService {
         return mapToDTO(repository.save(nuevaNotificacion));
     }
 
-    // ── ACTUALIZAR ──────────────────────────────────────
+    // ── ACTUALIZAR (CORREGIDO) ──────────────────────────────────────
     public Optional<registro_notificacionResponseDTO> actualizar(Long id, registro_notificacionRequestDTO dto) {
         return repository.findById(id).map(existente -> {
+            // ¡Aquí le pasamos los datos nuevos antes de guardar!
+            existente.setIdUsuario(dto.getIdUsuario());
+            existente.setIdPedido(dto.getIdPedido());
+            existente.setTipo(dto.getTipo());
+            existente.setMensaje(dto.getMensaje());
+
             return mapToDTO(repository.save(existente));
-            }).or(() -> {
-            throw new RuntimeException("Notificación NO encontrada con id: " + id);
         });
     }
 
@@ -70,4 +82,6 @@ public class registro_notificacionService {
     public void eliminar(Long id) {
         repository.deleteById(id);
     }
+
+
 }

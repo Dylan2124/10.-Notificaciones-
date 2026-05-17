@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -42,6 +43,17 @@ public class registro_notificacionController {
         return ResponseEntity.ok(opt.get());
     }
 
+    // ── GET: OBTENER NOTIFICACIONES POR USUARIO ───────
+    @GetMapping("/usuario/{idUsuario}")
+    public ResponseEntity<?> obtenerPorUsuario(@PathVariable Long idUsuario) {
+        List<registro_notificacionResponseDTO> lista = service.obtenerPorUsuario(idUsuario);
+        if (lista.isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No se encontraron notificaciones para el usuario: " + idUsuario);
+        }
+        return ResponseEntity.ok(lista);
+    }
+
     // ── POST: CREAR NOTIFICACIÓN ──────────────────────────────
     @PostMapping
     public ResponseEntity<registro_notificacionResponseDTO> guardar(
@@ -67,9 +79,14 @@ public class registro_notificacionController {
 
     // ── DELETE: ELIMINAR ──────────────────────────────────────
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        if (service.obtenerPorId(id).isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "No se puede eliminar. No existe notificación con ID: " + id));
+        }
+
         service.eliminar(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Map.of("mensaje", "Notificación con ID " + id + " eliminada con éxito."));
     }
 
 }
