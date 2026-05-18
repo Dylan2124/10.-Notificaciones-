@@ -4,6 +4,11 @@ import cl.dsy1103.notificaciones.dto.registro_notificacionRequestDTO;
 import cl.dsy1103.notificaciones.dto.registro_notificacionResponseDTO;
 import cl.dsy1103.notificaciones.model.registro_notificacion;
 import cl.dsy1103.notificaciones.repository.registro_notificacionRepository;
+
+import cl.dsy1103.notificaciones.client.UsuarioClient;
+import cl.dsy1103.notificaciones.dto.UsuarioExternoDTO;
+import lombok.extern.slf4j.Slf4j;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,12 +17,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class registro_notificacionService {
 
     private final registro_notificacionRepository repository;
+
+    private final UsuarioClient usuarioClient;
 
     // ── MAPEO PRIVADO: Entidad → ResponseDTO ─────────
     private registro_notificacionResponseDTO mapToDTO(registro_notificacion entidad) {
@@ -52,8 +59,25 @@ public class registro_notificacionService {
                 .collect(Collectors.toList());
     }
 
-    // ── GUARDAR ──────────────────────────────────────
+    // ── GUARDAR  ──────────────────────────────────────
     public registro_notificacionResponseDTO guardar(registro_notificacionRequestDTO dto) {
+
+        if (dto.getIdUsuario() != null && dto.getIdUsuario() > 0) {
+            try {
+                log.info("Llamando a ms-usuarios para obtener el correo del usuario ID: {}", dto.getIdUsuario());
+                UsuarioExternoDTO usuario = usuarioClient.obtenerUsuarioPorId(dto.getIdUsuario());
+
+                log.info(">>> SIMULACIÓN DE ENVÍO DE EMAIL <<<");
+                log.info("Para: {} ({})", usuario.getEmail(), usuario.getNombreCompleto());
+                log.info("Asunto: {}", dto.getTipo());
+                log.info("Cuerpo del mensaje: {}", dto.getMensaje());
+                log.info("--------------------------------------");
+
+            } catch (Exception e) {
+                log.warn("TOLERANCIA A FALLOS: No se pudo obtener el correo de ms-usuarios. El mensaje se guardará en BD igual. Motivo: {}", e.getMessage());
+            }
+        }
+
         registro_notificacion nuevaNotificacion = new registro_notificacion(
                 null,
                 dto.getIdUsuario(),
@@ -62,13 +86,16 @@ public class registro_notificacionService {
                 dto.getMensaje(),
                 LocalDateTime.now()
         );
-        return mapToDTO(repository.save(nuevaNotificacion));
+
+        registro_notificacion guardado = repository.save(nuevaNotificacion);
+        log.info("Notificación registrada exitosamente en la base de datos local.");
+
+        return mapToDTO(guardado);
     }
 
-    // ── ACTUALIZAR (CORREGIDO) ──────────────────────────────────────
+    // ── ACTUALIZAR   ──────────────────────────────────────
     public Optional<registro_notificacionResponseDTO> actualizar(Long id, registro_notificacionRequestDTO dto) {
         return repository.findById(id).map(existente -> {
-            // ¡Aquí le pasamos los datos nuevos antes de guardar!
             existente.setIdUsuario(dto.getIdUsuario());
             existente.setIdPedido(dto.getIdPedido());
             existente.setTipo(dto.getTipo());
@@ -82,6 +109,4 @@ public class registro_notificacionService {
     public void eliminar(Long id) {
         repository.deleteById(id);
     }
-
-
 }
