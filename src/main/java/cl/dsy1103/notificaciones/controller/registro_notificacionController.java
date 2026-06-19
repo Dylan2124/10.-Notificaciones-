@@ -5,6 +5,7 @@ import cl.dsy1103.notificaciones.dto.registro_notificacionResponseDTO;
 import cl.dsy1103.notificaciones.service.registro_notificacionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("/api/notificaciones")
@@ -25,9 +29,14 @@ public class registro_notificacionController {
     public ResponseEntity<?> obtenerTodas() {
         List<registro_notificacionResponseDTO> lista = service.obtenerTodas();
         if (lista.isEmpty()){
-            return ResponseEntity.ok("No se encontraron notificaciones");
+            return ResponseEntity.ok(Map.of("mensaje", "No se encontraron notificaciones"));
         }
-        return ResponseEntity.ok(service.obtenerTodas());
+
+        lista.forEach(dto -> dto.add(linkTo(methodOn(registro_notificacionController.class).obtenerPorId(dto.getIdNotificacion())).withSelfRel()));
+        CollectionModel<registro_notificacionResponseDTO> collectionModel = CollectionModel.of(lista,
+                linkTo(methodOn(registro_notificacionController.class).obtenerTodas()).withSelfRel());
+
+        return ResponseEntity.ok(collectionModel);
     }
 
     // ── GET: OBTENER POR ID  ───────
@@ -37,10 +46,14 @@ public class registro_notificacionController {
 
         if (opt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("No se encontró la notificación con el ID: " + id);
+                    .body(Map.of("error", "No se encontró la notificación con el ID: " + id));
         }
 
-        return ResponseEntity.ok(opt.get());
+        registro_notificacionResponseDTO response = opt.get();
+        response.add(linkTo(methodOn(registro_notificacionController.class).obtenerPorId(id)).withSelfRel());
+        response.add(linkTo(methodOn(registro_notificacionController.class).obtenerTodas()).withRel("todas-las-notificaciones"));
+
+        return ResponseEntity.ok(response);
     }
 
     // ── GET: OBTENER NOTIFICACIONES POR USUARIO ───────
@@ -49,16 +62,23 @@ public class registro_notificacionController {
         List<registro_notificacionResponseDTO> lista = service.obtenerPorUsuario(idUsuario);
         if (lista.isEmpty()){
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("No se encontraron notificaciones para el usuario: " + idUsuario);
+                    .body(Map.of("error", "No se encontraron notificaciones para el usuario: " + idUsuario));
         }
-        return ResponseEntity.ok(lista);
+
+        lista.forEach(dto -> dto.add(linkTo(methodOn(registro_notificacionController.class).obtenerPorId(dto.getIdNotificacion())).withSelfRel()));
+        CollectionModel<registro_notificacionResponseDTO> collectionModel = CollectionModel.of(lista,
+                linkTo(methodOn(registro_notificacionController.class).obtenerPorUsuario(idUsuario)).withSelfRel());
+
+        return ResponseEntity.ok(collectionModel);
     }
 
     // ── POST: CREAR NOTIFICACIÓN ──────────────────────────────
     @PostMapping
     public ResponseEntity<registro_notificacionResponseDTO> guardar(
             @Valid @RequestBody registro_notificacionRequestDTO request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.guardar(request));
+        registro_notificacionResponseDTO response = service.guardar(request);
+        response.add(linkTo(methodOn(registro_notificacionController.class).obtenerPorId(response.getIdNotificacion())).withSelfRel());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // ── PUT: ACTUALIZAR ───────────────────────────────────────
@@ -71,10 +91,14 @@ public class registro_notificacionController {
 
         if (actualizado.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Error al actualizar: La notificación con ID " + id + " no existe.");
+                    .body(Map.of("error", "Error al actualizar: La notificación con ID " + id + " no existe."));
         }
 
-        return ResponseEntity.ok(actualizado.get());
+        registro_notificacionResponseDTO response = actualizado.get();
+        response.add(linkTo(methodOn(registro_notificacionController.class).obtenerPorId(id)).withSelfRel());
+        response.add(linkTo(methodOn(registro_notificacionController.class).obtenerTodas()).withRel("todas-las-notificaciones"));
+
+        return ResponseEntity.ok(response);
     }
 
     // ── DELETE: ELIMINAR ──────────────────────────────────────
@@ -88,5 +112,4 @@ public class registro_notificacionController {
         service.eliminar(id);
         return ResponseEntity.ok(Map.of("mensaje", "Notificación con ID " + id + " eliminada con éxito."));
     }
-
 }
